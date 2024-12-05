@@ -8,7 +8,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.innoveworkshop.gametest"
+        applicationId = "pt.iade.games.jerrysurvivors"
         minSdk = 28
         targetSdk = 34
         versionCode = 1

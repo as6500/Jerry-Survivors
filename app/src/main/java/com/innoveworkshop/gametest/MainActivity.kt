@@ -13,12 +13,18 @@ import com.innoveworkshop.gametest.engine.Circle
 import com.innoveworkshop.gametest.engine.GameObject
 import com.innoveworkshop.gametest.engine.GameSurface
 import com.innoveworkshop.gametest.engine.Rectangle
+import com.innoveworkshop.gametest.R
 import com.innoveworkshop.gametest.engine.Vector
+
+
+//todo: make collisions like in rigidbody
+//todo: change the distance formula to be the proper formula
+
 
 class MainActivity : AppCompatActivity() {
     protected var gameSurface: GameSurface? = null
-    protected var upButton: Button? = null
-    protected var downButton: Button? = null
+//    protected var upButton: Button? = null
+//    protected var downButton: Button? = null
     protected var leftButton: Button? = null
     protected var rightButton: Button? = null
 
@@ -35,18 +41,18 @@ class MainActivity : AppCompatActivity() {
 
         gameSurface = findViewById<View>(R.id.gameSurface) as GameSurface
 
-        game = Game()
+        game = Game(this)
         gameSurface!!.setRootGameObject(game)
 
         setupControls()
     }
 
     private fun setupControls() {
-        upButton = findViewById<View>(R.id.up_button) as Button
-        upButton!!.setOnClickListener { game!!.circle!!.position.y -= 30f }
-
-        downButton = findViewById<View>(R.id.down_button) as Button
-        downButton!!.setOnClickListener { game!!.circle!!.position.y += 30f }
+//        upButton = findViewById<View>(R.id.up_button) as Button
+//        upButton!!.setOnClickListener { game!!.circle!!.position.y -= 30f }
+//
+//        downButton = findViewById<View>(R.id.down_button) as Button
+//        downButton!!.setOnClickListener { game!!.circle!!.position.y += 30f }
 
         leftButton = findViewById<View>(R.id.left_button) as Button
         leftButton!!.setOnClickListener { game!!.circle!!.position.x -= 30f }
@@ -55,7 +61,7 @@ class MainActivity : AppCompatActivity() {
         rightButton!!.setOnClickListener { game!!.circle!!.position.x += 30f }
     }
 
-    inner class Game : GameObject() {
+    inner class Game(private val context: android.content.Context) : GameObject() {
         var circle: Circle? = null
         private val fallingItems = mutableListOf<DroppingRectangle>()
         private var surface: GameSurface? = null
@@ -125,12 +131,27 @@ class MainActivity : AppCompatActivity() {
 
         override fun onDraw(canvas: android.graphics.Canvas?) {
             super.onDraw(canvas)
-            paint.color = Color.BLACK
+
+            val paint = android.graphics.Paint().apply {
+                style = android.graphics.Paint.Style.FILL
+                textSize = 50f // Adjust the text size as needed
+                isAntiAlias = true
+            }
+
+            // Dynamically resolve the primary color depending on the theme
+            val typedValue = android.util.TypedValue()
+            context.theme.resolveAttribute(
+                com.google.android.material.R.attr.colorPrimary,
+                typedValue,
+                true
+            )
+            paint.color = typedValue.data
+
             // Draw "Game Over" text if the game is over
             if (isGameOver && canvas != null) {
                 val text = "Game Over! Score: $survivalCount"
                 val textWidth = paint.measureText(text)
-                val x = (surface!!.width - textWidth) / 2 // Center text horizontally
+                val x = (surface!!.width - textWidth) / 2.toFloat() // Center text horizontally
                 val y = (surface!!.height / 2).toFloat() // Center text vertically
                 canvas.drawText(text, x, y, paint)
 
@@ -140,6 +161,9 @@ class MainActivity : AppCompatActivity() {
                 canvas.drawText(highScoreText, (surface!!.width - highScoreWidth) / 2, y + 100, paint)
             }
         }
+
+
+
 
         private fun spawnNewFallingItem() {
             // Create a new falling rectangle at a random horizontal position
