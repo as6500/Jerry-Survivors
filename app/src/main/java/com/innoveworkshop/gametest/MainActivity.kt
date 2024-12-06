@@ -22,13 +22,8 @@ import android.graphics.RectF
 import com.innoveworkshop.gametest.assets.DroppingRectangle
 import kotlin.math.pow
 
-
-//todo: make collisions like in rigidbody perhaps
-//todo: problem with jerrys fat ass also triggering  game ending DONE
-//todo: use sprites DONE
+//todo: clean up code
 //todo: screen manager
-//todo: use gravity instead
-//todo: change the distance formula to be the proper formula DONE
 //todo: fix double circles on app change
 
 class MainActivity : AppCompatActivity() {
@@ -38,7 +33,7 @@ class MainActivity : AppCompatActivity() {
     protected var leftButton: Button? = null
     protected var rightButton: Button? = null
     protected var startButton: Button? = null
-
+    private var isPaused = false
     protected var game: Game? = null
     private lateinit var sharedPreferences: SharedPreferences
     private val highScoreKey = "high_score"  // Key for saving high score
@@ -50,13 +45,13 @@ class MainActivity : AppCompatActivity() {
     // Initialize SharedPreferences
     sharedPreferences = getSharedPreferences("GamePrefs", MODE_PRIVATE)
 
-   gameSurface = findViewById<View>(R.id.gameSurface) as GameSurface
+    gameSurface = findViewById<View>(R.id.gameSurface) as GameSurface
 
-   game = Game(this)
-   gameSurface!!.setRootGameObject(game)
+    game = Game(this)
+    gameSurface!!.setRootGameObject(game)
 
-   setupControls()
-   }
+    setupControls()
+    }
 
     private fun setupControls() {
         leftButton = findViewById<View>(R.id.left_button) as Button
@@ -66,7 +61,11 @@ class MainActivity : AppCompatActivity() {
         rightButton!!.setOnClickListener { game!!.circle!!.position.x += 30f }
 
         startButton = findViewById<View>(R.id.start_button) as Button
-        startButton!!.setOnClickListener { Log.d("startbutton", "hi") }
+        startButton!!.setOnClickListener {game?.let {
+            isPaused = !isPaused // Toggle pause state
+            val buttonText = if (isPaused) "Resume" else "Pause"
+            startButton!!.text = buttonText
+        }}
     }
 
     class Sprite(
@@ -90,8 +89,6 @@ class MainActivity : AppCompatActivity() {
             )
         }
     }
-
-
 
     inner class Game(private val context: android.content.Context) : GameObject() {
         private fun loadBitmap(resourceId: Int, width: Int, height: Int): Bitmap {
@@ -173,7 +170,7 @@ class MainActivity : AppCompatActivity() {
                 ),
                 width = 100f,
                 height = 100f,
-                dropRate = 0f // Drop rate will be calculated using physics
+                //dropRate = 0f // Drop rate will be calculated using physics
             )
 
             fallingItems.add(item)
@@ -185,7 +182,7 @@ class MainActivity : AppCompatActivity() {
 
 
         override fun onFixedUpdate() {
-            if (isGameOver) return // Stop updates if the game is over
+            if (isGameOver || isPaused) return // Skip updates if the game is over or paused
 
             super.onFixedUpdate()
 
@@ -219,6 +216,7 @@ class MainActivity : AppCompatActivity() {
 
             checkFloorCollisions()
         }
+
 
 
         override fun onDraw(canvas: Canvas?) {

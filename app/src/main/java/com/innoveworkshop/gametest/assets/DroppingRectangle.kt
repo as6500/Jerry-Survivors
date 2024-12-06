@@ -10,7 +10,7 @@ class DroppingRectangle(
     position: Vector?,
     width: Float,
     height: Float,
-    dropRate: Float,
+    //dropRate: Float,
     private val bitmap: Bitmap,
     //color: Int
 ) : Rectangle(position, width, height) {
