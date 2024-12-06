@@ -3,7 +3,7 @@ package com.innoveworkshop.gametest.engine
 import android.graphics.Canvas
 import android.graphics.Paint
 
-open class Rectangle(position: Vector?, var width: Float, var height: Float, color: Int) :
+open class Rectangle(position: Vector?, var width: Float, var height: Float) :
     GameObject(
         position!!
     ), Caged {
@@ -11,7 +11,7 @@ open class Rectangle(position: Vector?, var width: Float, var height: Float, col
     var paint: Paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     init {
-        paint.color = color
+        //paint.color = color
         paint.style = Paint.Style.FILL
     }
 

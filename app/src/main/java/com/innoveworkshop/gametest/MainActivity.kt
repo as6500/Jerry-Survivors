@@ -7,19 +7,29 @@ import android.os.SystemClock
 import android.view.View
 import android.widget.Button
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import com.innoveworkshop.gametest.assets.DroppingRectangle
 import com.innoveworkshop.gametest.engine.Circle
 import com.innoveworkshop.gametest.engine.GameObject
 import com.innoveworkshop.gametest.engine.GameSurface
 import com.innoveworkshop.gametest.engine.Rectangle
 import com.innoveworkshop.gametest.R
 import com.innoveworkshop.gametest.engine.Vector
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.RectF
+import com.innoveworkshop.gametest.assets.DroppingRectangle
+import kotlin.math.pow
 
 
-//todo: make collisions like in rigidbody
-//todo: change the distance formula to be the proper formula
-
+//todo: make collisions like in rigidbody perhaps
+//todo: problem with jerrys fat ass also triggering  game ending DONE
+//todo: use sprites DONE
+//todo: screen manager
+//todo: use gravity instead
+//todo: change the distance formula to be the proper formula DONE
+//todo: fix double circles on app change
 
 class MainActivity : AppCompatActivity() {
     protected var gameSurface: GameSurface? = null
@@ -27,59 +37,88 @@ class MainActivity : AppCompatActivity() {
 //    protected var downButton: Button? = null
     protected var leftButton: Button? = null
     protected var rightButton: Button? = null
+    protected var startButton: Button? = null
 
     protected var game: Game? = null
     private lateinit var sharedPreferences: SharedPreferences
     private val highScoreKey = "high_score"  // Key for saving high score
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+    super.onCreate(savedInstanceState)
+    setContentView(R.layout.activity_main)
 
-        // Initialize SharedPreferences
-        sharedPreferences = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+    // Initialize SharedPreferences
+    sharedPreferences = getSharedPreferences("GamePrefs", MODE_PRIVATE)
 
-        gameSurface = findViewById<View>(R.id.gameSurface) as GameSurface
+   gameSurface = findViewById<View>(R.id.gameSurface) as GameSurface
 
-        game = Game(this)
-        gameSurface!!.setRootGameObject(game)
+   game = Game(this)
+   gameSurface!!.setRootGameObject(game)
 
-        setupControls()
-    }
+   setupControls()
+   }
 
     private fun setupControls() {
-//        upButton = findViewById<View>(R.id.up_button) as Button
-//        upButton!!.setOnClickListener { game!!.circle!!.position.y -= 30f }
-//
-//        downButton = findViewById<View>(R.id.down_button) as Button
-//        downButton!!.setOnClickListener { game!!.circle!!.position.y += 30f }
-
         leftButton = findViewById<View>(R.id.left_button) as Button
         leftButton!!.setOnClickListener { game!!.circle!!.position.x -= 30f }
 
         rightButton = findViewById<View>(R.id.right_button) as Button
         rightButton!!.setOnClickListener { game!!.circle!!.position.x += 30f }
+
+        startButton = findViewById<View>(R.id.start_button) as Button
+        startButton!!.setOnClickListener { Log.d("startbutton", "hi") }
     }
 
-    inner class Game(private val context: android.content.Context) : GameObject() {
-        var circle: Circle? = null
-        private val fallingItems = mutableListOf<DroppingRectangle>()
-        private var surface: GameSurface? = null
-        private val gravity = 0.5f // Gravity value for falling items
-        private var isGameOver = false // Track game state
+    class Sprite(
+        private val bitmap: Bitmap,
+        position: Vector,
+        var width: Float,
+        var height: Float
+    ) : GameObject() {
 
-        private val paint = Paint().apply {
-            color = Color.WHITE
-            textSize = 100f
-            isAntiAlias = true
+        init {
+            this.position = position
         }
 
-        private var lastSpawnTime: Long = 0
+        override fun onDraw(canvas: Canvas?) {
+            super.onDraw(canvas)
+            canvas?.drawBitmap(
+                Bitmap.createScaledBitmap(bitmap, width.toInt(), height.toInt(), true),
+                position.x - width / 2, // Center the sprite
+                position.y - height / 2, // Center the sprite
+                Paint()
+            )
+        }
+    }
+
+
+
+    inner class Game(private val context: android.content.Context) : GameObject() {
+        private fun loadBitmap(resourceId: Int, width: Int, height: Int): Bitmap {
+            val originalBitmap = BitmapFactory.decodeResource(context.resources, resourceId)
+            return Bitmap.createScaledBitmap(originalBitmap, width, height, true)
+            Log.d("images", "load success?")
+        }
+
+        private val velocities = mutableMapOf<DroppingRectangle, Float>()
+        var circle: Sprite? = null
+        private val fallingItems = mutableListOf<DroppingRectangle>()
+        private var surface: GameSurface? = null
+        private val gravity = 10f // Gravity value for falling items
+        private var isGameOver = false // Track game state
         private val spawnInterval: Long = 1000 // Time interval between spawns (in milliseconds)
+        private var lastSpawnTime: Long = 0
 
         // Survival and high score tracking
-        private var survivalCount: Int = 0 // Count how many pills survived
-        private var highScore: Int = 0 // Store the high score
+        private var survivalCount: Int = 0
+        private var highScore: Int = 0
+
+        // Bitmaps for the falling items
+        private lateinit var playerBitmap: Bitmap
+        private lateinit var orangeCatBitmap: Bitmap
+        private lateinit var orangeRobotBitmap: Bitmap
+        private lateinit var whiteCatBitmap: Bitmap
+        private lateinit var whiteRobotBitmap: Bitmap
 
         override fun onStart(surface: GameSurface?) {
             super.onStart(surface)
@@ -88,57 +127,109 @@ class MainActivity : AppCompatActivity() {
             // Load high score from SharedPreferences
             highScore = sharedPreferences.getInt(highScoreKey, 0)
 
-            // Create the player-controlled circle
-            circle = Circle(
-                (surface!!.width / 2).toFloat(),
-                (surface.height - 200).toFloat(), // Position the circle near the bottom
-                100f,
-                Color.RED
-            )
-            surface.addGameObject(circle!!)
+            // Load resources
+            playerBitmap = loadBitmap(R.drawable.jerry, 95, 200) ?: throw RuntimeException("Failed to load player bitmap")
+            orangeCatBitmap = loadBitmap(R.drawable.orangecat, 100, 100) ?: throw RuntimeException("Failed to load orange bitmap")
+            orangeRobotBitmap = loadBitmap(R.drawable.orangerobot, 100, 100) ?: throw RuntimeException("Failed to load orange bitmap")
+            whiteCatBitmap = loadBitmap(R.drawable.whitecat, 100, 100)?: throw RuntimeException("Failed to load white bitmap")
+            whiteRobotBitmap = loadBitmap(R.drawable.whiterobot, 100, 100) ?: throw RuntimeException("Failed to load white bitmap")
 
-            // Initialize the first falling item
+            // Initialize the player-controlled sprite
+            val initialPosition = Vector(
+                (surface?.width ?: 0) / 2f, // Center horizontally
+                (surface?.height ?: 0) - 200f // Near the bottom
+            )
+            circle = Sprite(
+                bitmap = playerBitmap,
+                position = initialPosition,
+                width = 150f,
+                height = 150f
+            )
+            surface?.addGameObject(circle!!)
+
+            // Spawn the first falling item
             spawnNewFallingItem()
         }
+
+        private fun spawnNewFallingItem() {
+            if (surface == null) return // Ensure surface is available before proceeding
+
+            val bitmapColorMap = mapOf(
+                orangeCatBitmap to Color.RED,
+                orangeRobotBitmap to Color.BLUE,
+                whiteCatBitmap to Color.GREEN,
+                whiteRobotBitmap to Color.YELLOW
+            )
+
+            val (selectedBitmap, selectedColor) = bitmapColorMap.entries.random()
+
+            val screenWidth = surface!!.width
+
+            val item = DroppingRectangle(
+                bitmap = selectedBitmap,
+                position = Vector(
+                    (Math.random() * screenWidth).toFloat(),
+                    0f // Start at the top of the screen
+                ),
+                width = 100f,
+                height = 100f,
+                dropRate = 0f // Drop rate will be calculated using physics
+            )
+
+            fallingItems.add(item)
+            surface!!.addGameObject(item)
+
+            // Initialize velocity
+            velocities[item] = 900f
+        }
+
 
         override fun onFixedUpdate() {
             if (isGameOver) return // Stop updates if the game is over
 
             super.onFixedUpdate()
 
-            // Check the time since the last spawn and create a new falling item if enough time has passed
             val currentTime = SystemClock.elapsedRealtime()
             if (currentTime - lastSpawnTime >= spawnInterval) {
                 spawnNewFallingItem()
-                lastSpawnTime = currentTime // Update last spawn time
-                survivalCount++ // Increase the survival count when a new pill spawns
+                lastSpawnTime = currentTime
+                survivalCount++
             }
 
-            // Update falling items and remove any that fall off the screen
             val iterator = fallingItems.iterator()
             while (iterator.hasNext()) {
                 val item = iterator.next()
-                if (item.position.y > surface!!.height) {
-                    // Remove items that fall off the screen
-                    iterator.remove()
-                    surface!!.removeGameObject(item)
+
+                // Update velocity and position
+                val deltaTime = 0.016f // Time per frame (60 FPS)
+                val currentVelocity = velocities[item] ?: continue // Get current velocity
+                val newVelocity = currentVelocity + gravity * deltaTime
+                velocities[item] = newVelocity
+
+                // Update position based on velocity
+                item.position.y += newVelocity * 0.016f // Displacement = velocity * time
+
+                // Remove if it hits the bottom
+                if (item.position.y + item.height > (surface?.height ?: 0)) {
+                    iterator.remove() // Remove from fallingItems
+                    surface?.removeGameObject(item) // Remove from GameSurface
+                    velocities.remove(item) // Remove velocity tracking
                 }
             }
 
-            // Add collision detection
-            checkCollisions()
+            checkFloorCollisions()
         }
 
-        override fun onDraw(canvas: android.graphics.Canvas?) {
+
+        override fun onDraw(canvas: Canvas?) {
             super.onDraw(canvas)
 
-            val paint = android.graphics.Paint().apply {
-                style = android.graphics.Paint.Style.FILL
-                textSize = 50f // Adjust the text size as needed
+            val paint = Paint().apply {
+                textSize = 50f
                 isAntiAlias = true
             }
 
-            // Dynamically resolve the primary color depending on the theme
+            // Resolve colorPrimary dynamically
             val typedValue = android.util.TypedValue()
             context.theme.resolveAttribute(
                 com.google.android.material.R.attr.colorPrimary,
@@ -147,106 +238,73 @@ class MainActivity : AppCompatActivity() {
             )
             paint.color = typedValue.data
 
-            // Draw "Game Over" text if the game is over
+            // Draw Game Over screen
             if (isGameOver && canvas != null) {
-                val text = "Game Over! Score: $survivalCount"
-                val textWidth = paint.measureText(text)
-                val x = (surface!!.width - textWidth) / 2.toFloat() // Center text horizontally
-                val y = (surface!!.height / 2).toFloat() // Center text vertically
-                canvas.drawText(text, x, y, paint)
+                val gameOverText = "Game Over! Score: $survivalCount"
+                val textWidth = paint.measureText(gameOverText)
+                val x = ((surface?.width ?: 0) - textWidth) / 2f
+                val y = (surface?.height ?: 0) / 2f
+                canvas.drawText(gameOverText, x, y, paint)
 
-                // Draw High Score
                 val highScoreText = "High Score: $highScore"
                 val highScoreWidth = paint.measureText(highScoreText)
-                canvas.drawText(highScoreText, (surface!!.width - highScoreWidth) / 2, y + 100, paint)
+                canvas.drawText(highScoreText, ((surface?.width ?: 0) - highScoreWidth) / 2, y + 100, paint)
             }
         }
 
-
-
-
-        private fun spawnNewFallingItem() {
-            // Create a new falling rectangle at a random horizontal position
-            val item = DroppingRectangle(
-                Vector(
-                    (Math.random() * surface!!.width).toFloat(), // Random horizontal position
-                    0f // Start at the top of the screen
-                ),
-                50f, 50f, gravity, Color.BLUE
-            )
-            fallingItems.add(item)
-            surface!!.addGameObject(item)
-        }
-
-        private fun checkCollisions() {
-            // Check if the circle collides with any falling items
-            for (item in fallingItems) {
+        private fun checkFloorCollisions() {
+            val iterator = fallingItems.iterator()
+            while (iterator.hasNext()) {
+                val item = iterator.next()
                 if (checkCollision(circle!!, item)) {
-                    isGameOver = true // End the game
-                    checkHighScore() // Check if this is a new high score
-                    break
+                    iterator.remove() // Remove from fallingItems list
+                    surface?.removeGameObject(item) // Remove from GameSurface
+                    velocities.remove(item) // Remove velocity tracking
+                    isGameOver = true
+                    checkHighScore()
+                    break // End loop if game is over
                 }
             }
         }
 
-        private fun checkCollision(circle: Circle, rect: DroppingRectangle): Boolean {
-            // Calculate if the circle's bounding box intersects the rectangle's bounding box
-            val circleLeft = circle.position.x - circle.radius
-            val circleRight = circle.position.x + circle.radius
-            val circleTop = circle.position.y - circle.radius
-            val circleBottom = circle.position.y + circle.radius
+        private fun checkCollision(sprite: Sprite, rect: DroppingRectangle): Boolean {
+            // Center of the sprite
+            val spriteCenterX = sprite.position.x
+            val spriteCenterY = sprite.position.y
 
-            val rectLeft = rect.position.x
-            val rectRight = rect.position.x + rect.width
-            val rectTop = rect.position.y
-            val rectBottom = rect.position.y + rect.height
+            // Center of the rectangle
+            val rectCenterX = rect.position.x
+            val rectCenterY = rect.position.y
 
-            // Check if the bounding boxes overlap
-            return !(circleRight < rectLeft || circleLeft > rectRight || circleBottom < rectTop || circleTop > rectBottom)
+            // Distance between the centers
+            val dx = spriteCenterX - rectCenterX
+            val dy = spriteCenterY - rectCenterY
+            val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
+
+            // radii if using hypotenuse
+            //val spriteRadius = Math.sqrt((sprite.width * sprite.width + sprite.height * sprite.height).toDouble()) / 2
+            //val rectRadius = Math.sqrt((rect.width * rect.width + rect.height * rect.height).toDouble()) / 2
+
+            //radii if using half width
+            val spriteRadius = sprite.width / 2
+            val rectRadius = rect.width / 2
+
+            // Collision occurs if the distance is less than the sum of the radii
+            return distance < (spriteRadius + rectRadius)
         }
 
         private fun checkHighScore() {
-            // Update high score if the current score is higher
             if (survivalCount > highScore) {
                 highScore = survivalCount
-                saveHighScore() // Save the new high score to SharedPreferences
+                saveHighScore()
             }
         }
 
         private fun saveHighScore() {
-            // Save the new high score to SharedPreferences
             val editor = sharedPreferences.edit()
             editor.putInt(highScoreKey, highScore)
             editor.apply()
         }
     }
 
-    class DroppingRectangle(
-        position: Vector,
-        val recwidth: Float,
-        val recheight: Float,
-        val recgravity: Float, // Gravity applied to the item
-        color: Int
-    ) : Rectangle(position, recwidth, recheight, color) {
-
-        var velocity = Vector(0f, 0f) // Initial velocity is 0
-
-        override fun onFixedUpdate() {
-            super.onFixedUpdate()
-
-            // Apply gravity to vertical velocity (y-axis)
-            velocity.y += recgravity
-
-            // Update the position based on velocity
-            position.x += velocity.x
-            position.y += velocity.y
-        }
-
-        fun resetPosition(screenWidth: Float) {
-            // Reset the rectangle to the top of the screen with a random horizontal position
-            position.y = 0f
-            position.x = (Math.random() * screenWidth).toFloat()
-            velocity.y = 0f // Reset vertical velocity to 0
-        }
-    }
 }
