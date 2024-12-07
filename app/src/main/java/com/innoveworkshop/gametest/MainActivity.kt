@@ -25,6 +25,7 @@ import kotlin.math.pow
 //todo: clean up code
 //todo: screen manager
 //todo: fix double circles on app change
+// todo: jail jerry DONE
 
 class MainActivity : AppCompatActivity() {
     protected var gameSurface: GameSurface? = null
@@ -55,10 +56,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupControls() {
         leftButton = findViewById<View>(R.id.left_button) as Button
-        leftButton!!.setOnClickListener { game!!.circle!!.position.x -= 30f }
+        leftButton!!.setOnClickListener { game!!.circle!!.position.x -= 30f
+            game?.constrainPlayerPosition()}
+
 
         rightButton = findViewById<View>(R.id.right_button) as Button
-        rightButton!!.setOnClickListener { game!!.circle!!.position.x += 30f }
+        rightButton!!.setOnClickListener { game!!.circle!!.position.x += 30f
+            game?.constrainPlayerPosition()}
+
 
         startButton = findViewById<View>(R.id.start_button) as Button
         startButton!!.setOnClickListener {game?.let {
@@ -105,6 +110,15 @@ class MainActivity : AppCompatActivity() {
         private var isGameOver = false // Track game state
         private val spawnInterval: Long = 1000 // Time interval between spawns (in milliseconds)
         private var lastSpawnTime: Long = 0
+
+        fun constrainPlayerPosition() {
+            circle?.let { player ->
+                val halfJerry = player.width / 2
+                val screenWidth = surface!!.width
+                player.position.x = player.position.x.coerceIn(halfJerry, screenWidth - halfJerry)
+            }
+        }
+
 
         // Survival and high score tracking
         private var survivalCount: Int = 0
