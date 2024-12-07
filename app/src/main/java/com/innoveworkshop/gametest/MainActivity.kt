@@ -24,7 +24,7 @@ import kotlin.math.pow
 
 //todo: clean up code
 //todo: screen manager
-//todo: fix double circles on app change
+//todo: fix double circles on app change DONE
 // todo: jail jerry DONE
 
 class MainActivity : AppCompatActivity() {
@@ -34,35 +34,48 @@ class MainActivity : AppCompatActivity() {
     protected var leftButton: Button? = null
     protected var rightButton: Button? = null
     protected var startButton: Button? = null
+    private var isGameOver = false // Track game state
     private var isPaused = false
     protected var game: Game? = null
     private lateinit var sharedPreferences: SharedPreferences
     private val highScoreKey = "high_score"  // Key for saving high score
 
     override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContentView(R.layout.activity_main)
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-    // Initialize SharedPreferences
-    sharedPreferences = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+        // Initialize SharedPreferences
+        sharedPreferences = getSharedPreferences("GamePrefs", MODE_PRIVATE)
 
-    gameSurface = findViewById<View>(R.id.gameSurface) as GameSurface
+        gameSurface = findViewById<View>(R.id.gameSurface) as GameSurface
 
-    game = Game(this)
-    gameSurface!!.setRootGameObject(game)
+        game = Game(this)
+        gameSurface!!.setRootGameObject(game)
 
-    setupControls()
+        setupControls()
+
+        // Add a listener to detect window focus changes
+        gameSurface?.viewTreeObserver?.addOnWindowFocusChangeListener { hasFocus ->
+            if (!hasFocus) {
+                // App has lost focus (e.g., multitasking mode)
+                if (!isPaused) { // Only pause if not already paused
+                    isPaused = true
+                    startButton?.text = "Resume"
+                }
+            }
+        }
     }
+
 
     private fun setupControls() {
         leftButton = findViewById<View>(R.id.left_button) as Button
-        leftButton!!.setOnClickListener { game!!.circle!!.position.x -= 30f
-            game?.constrainPlayerPosition()}
+        leftButton!!.setOnClickListener { if (isPaused == false && isGameOver == false){game!!.circle!!.position.x -= 30f
+            game?.constrainPlayerPosition()}}
 
 
         rightButton = findViewById<View>(R.id.right_button) as Button
-        rightButton!!.setOnClickListener { game!!.circle!!.position.x += 30f
-            game?.constrainPlayerPosition()}
+        rightButton!!.setOnClickListener {if (isPaused == false && isGameOver == false){game!!.circle!!.position.x += 30f
+            game?.constrainPlayerPosition()}}
 
 
         startButton = findViewById<View>(R.id.start_button) as Button
@@ -107,7 +120,7 @@ class MainActivity : AppCompatActivity() {
         private val fallingItems = mutableListOf<DroppingRectangle>()
         private var surface: GameSurface? = null
         private val gravity = 10f // Gravity value for falling items
-        private var isGameOver = false // Track game state
+
         private val spawnInterval: Long = 1000 // Time interval between spawns (in milliseconds)
         private var lastSpawnTime: Long = 0
 
@@ -138,29 +151,33 @@ class MainActivity : AppCompatActivity() {
             // Load high score from SharedPreferences
             highScore = sharedPreferences.getInt(highScoreKey, 0)
 
-            // Load resources
-            playerBitmap = loadBitmap(R.drawable.jerry, 95, 200) ?: throw RuntimeException("Failed to load player bitmap")
-            orangeCatBitmap = loadBitmap(R.drawable.orangecat, 100, 100) ?: throw RuntimeException("Failed to load orange bitmap")
-            orangeRobotBitmap = loadBitmap(R.drawable.orangerobot, 100, 100) ?: throw RuntimeException("Failed to load orange bitmap")
-            whiteCatBitmap = loadBitmap(R.drawable.whitecat, 100, 100)?: throw RuntimeException("Failed to load white bitmap")
-            whiteRobotBitmap = loadBitmap(R.drawable.whiterobot, 100, 100) ?: throw RuntimeException("Failed to load white bitmap")
+            if (circle == null) {
+                // Load resources
+                playerBitmap = loadBitmap(R.drawable.jerry, 95, 200) ?: throw RuntimeException("Failed to load player bitmap")
+                orangeCatBitmap = loadBitmap(R.drawable.orangecat, 100, 100) ?: throw RuntimeException("Failed to load orange bitmap")
+                orangeRobotBitmap = loadBitmap(R.drawable.orangerobot, 100, 100) ?: throw RuntimeException("Failed to load orange bitmap")
+                whiteCatBitmap = loadBitmap(R.drawable.whitecat, 100, 100) ?: throw RuntimeException("Failed to load white bitmap")
+                whiteRobotBitmap = loadBitmap(R.drawable.whiterobot, 100, 100) ?: throw RuntimeException("Failed to load white bitmap")
 
-            // Initialize the player-controlled sprite
-            val initialPosition = Vector(
-                (surface?.width ?: 0) / 2f, // Center horizontally
-                (surface?.height ?: 0) - 200f // Near the bottom
-            )
-            circle = Sprite(
-                bitmap = playerBitmap,
-                position = initialPosition,
-                width = 150f,
-                height = 150f
-            )
-            surface?.addGameObject(circle!!)
+                // Initialize the player-controlled sprite
+                val initialPosition = Vector(
+                    (surface?.width ?: 0) / 2f, // Center horizontally
+                    (surface?.height ?: 0) - 200f // Near the bottom
+                )
+                circle = Sprite(
+                    bitmap = playerBitmap,
+                    position = initialPosition,
+                    width = 150f,
+                    height = 150f
+                )
+                surface?.addGameObject(circle!!)
+            }
 
             // Spawn the first falling item
             spawnNewFallingItem()
         }
+
+
 
         private fun spawnNewFallingItem() {
             if (surface == null) return // Ensure surface is available before proceeding
