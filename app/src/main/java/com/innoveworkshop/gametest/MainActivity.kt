@@ -19,17 +19,19 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.RectF
+import android.media.MediaPlayer
 import com.innoveworkshop.gametest.assets.DroppingRectangle
 import kotlin.math.pow
 
 //todo: clean up code
 //todo: screen manager
 //todo: fix double circles on app change DONE
-// todo: jail jerry DONE
+//todo: jail jerry DONE
+//todo: jerry meow easteregg DONE
 
 class MainActivity : AppCompatActivity() {
     protected var gameSurface: GameSurface? = null
-//    protected var upButton: Button? = null
+    //    protected var upButton: Button? = null
 //    protected var downButton: Button? = null
     protected var leftButton: Button? = null
     protected var rightButton: Button? = null
@@ -39,6 +41,8 @@ class MainActivity : AppCompatActivity() {
     protected var game: Game? = null
     private lateinit var sharedPreferences: SharedPreferences
     private val highScoreKey = "high_score"  // Key for saving high score
+    private var meowSound: MediaPlayer? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,11 +50,28 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize SharedPreferences
         sharedPreferences = getSharedPreferences("GamePrefs", MODE_PRIVATE)
+        meowSound = MediaPlayer.create(this, R.raw.meow)
 
         gameSurface = findViewById<View>(R.id.gameSurface) as GameSurface
-
         game = Game(this)
         gameSurface!!.setRootGameObject(game)
+
+        gameSurface!!.setOnTouchListener { v, event ->
+            if (!isPaused && !isGameOver) {
+                // Check if the player sprite (circle) is tapped
+                val x = event.x
+                val y = event.y
+
+                // Check if the circle is tapped
+                game?.circle?.let {
+                    if (it.isTapped(x, y)) {
+                        // Play the sound when the sprite is tapped
+                        meowSound?.start()
+                    }
+                }
+            }
+            true
+        }
 
         setupControls()
 
@@ -69,21 +90,25 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupControls() {
         leftButton = findViewById<View>(R.id.left_button) as Button
-        leftButton!!.setOnClickListener { if (isPaused == false && isGameOver == false){game!!.circle!!.position.x -= 30f
-            game?.constrainPlayerPosition()}}
+        leftButton!!.setOnClickListener { if (isPaused == false && isGameOver == false){
+            game!!.circle!!.position.x -= 30f
+            game?.constrainPlayerPosition()}
+        }
 
 
         rightButton = findViewById<View>(R.id.right_button) as Button
-        rightButton!!.setOnClickListener {if (isPaused == false && isGameOver == false){game!!.circle!!.position.x += 30f
-            game?.constrainPlayerPosition()}}
+        rightButton!!.setOnClickListener {if (isPaused == false && isGameOver == false){
+            game!!.circle!!.position.x += 30f
+            game?.constrainPlayerPosition()}
+        }
 
 
         startButton = findViewById<View>(R.id.start_button) as Button
         startButton!!.setOnClickListener {game?.let {
             isPaused = !isPaused // Toggle pause state
             val buttonText = if (isPaused) "Resume" else "Pause"
-            startButton!!.text = buttonText
-        }}
+            startButton!!.text = buttonText}
+        }
     }
 
     class Sprite(
@@ -105,6 +130,16 @@ class MainActivity : AppCompatActivity() {
                 position.y - height / 2, // Center the sprite
                 Paint()
             )
+        }
+
+        fun isTapped(x: Float, y: Float): Boolean {
+            // Check if the tap coordinates are within the sprite's bounds
+            val left = position.x - width / 2
+            val right = position.x + width / 2
+            val top = position.y - height / 2
+            val bottom = position.y + height / 2
+
+            return x >= left && x <= right && y >= top && y <= bottom
         }
     }
 
@@ -162,7 +197,7 @@ class MainActivity : AppCompatActivity() {
                 // Initialize the player-controlled sprite
                 val initialPosition = Vector(
                     (surface?.width ?: 0) / 2f, // Center horizontally
-                    (surface?.height ?: 0) - 200f // Near the bottom
+                    (surface?.height ?: 0) - 150f // Near the bottom
                 )
                 circle = Sprite(
                     bitmap = playerBitmap,
@@ -214,7 +249,6 @@ class MainActivity : AppCompatActivity() {
 
         override fun onFixedUpdate() {
             if (isGameOver || isPaused) return // Skip updates if the game is over or paused
-
             super.onFixedUpdate()
 
             val currentTime = SystemClock.elapsedRealtime()

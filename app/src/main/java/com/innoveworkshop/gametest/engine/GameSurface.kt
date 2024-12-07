@@ -2,6 +2,7 @@ package com.innoveworkshop.gametest.engine
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.util.AttributeSet
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -68,7 +69,7 @@ class GameSurface @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
+        //canvas.drawColor(Color.CYAN)
         root!!.onDraw(canvas)
         for (gameObject in gameObjects) {
             gameObject.onDraw(canvas)

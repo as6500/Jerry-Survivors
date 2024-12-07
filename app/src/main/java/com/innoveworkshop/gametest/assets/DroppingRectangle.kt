@@ -13,6 +13,7 @@ class DroppingRectangle(
     //dropRate: Float,
     private val bitmap: Bitmap,
     //color: Int
+    val isDashFish: Boolean = false
 ) : Rectangle(position, width, height) {
     var dropRate: Float = 0f
 
