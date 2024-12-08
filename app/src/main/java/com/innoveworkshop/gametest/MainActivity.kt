@@ -37,7 +37,8 @@ class MainActivity : AppCompatActivity() {
     protected var rightButton: Button? = null
     protected var startButton: Button? = null
     private var isGameOver = false // Track game state
-    private var isPaused = false
+    private var isPaused = true
+    var survivalCount: Int = 0
     protected var game: Game? = null
     private lateinit var sharedPreferences: SharedPreferences
     private val highScoreKey = "high_score"  // Key for saving high score
@@ -104,11 +105,19 @@ class MainActivity : AppCompatActivity() {
 
 
         startButton = findViewById<View>(R.id.start_button) as Button
-        startButton!!.setOnClickListener {game?.let {
-            isPaused = !isPaused // Toggle pause state
-            val buttonText = if (isPaused) "Resume" else "Pause"
-            startButton!!.text = buttonText}
+        startButton!!.setOnClickListener {
+            if (isGameOver) {
+                // Reset the game if it's over
+                game?.resetGame()
+                isGameOver = false
+                survivalCount = 0 // Reset survival count
+                game!!.startGame()  // Start the game after reset
+            } else {
+                // Toggle between Pause and Resume
+                isPaused = !isPaused
+            }
         }
+
     }
 
     class Sprite(
@@ -169,7 +178,6 @@ class MainActivity : AppCompatActivity() {
 
 
         // Survival and high score tracking
-        private var survivalCount: Int = 0
         private var highScore: Int = 0
 
         // Bitmaps for the falling items
@@ -207,12 +215,12 @@ class MainActivity : AppCompatActivity() {
                 )
                 surface?.addGameObject(circle!!)
             }
-
-            // Spawn the first falling item
-            spawnNewFallingItem()
         }
 
-
+        fun startGame() {
+            // Game logic starts only when the "Start" button is pressed
+            spawnNewFallingItem()
+        }
 
         private fun spawnNewFallingItem() {
             if (surface == null) return // Ensure surface is available before proceeding
@@ -300,20 +308,44 @@ class MainActivity : AppCompatActivity() {
                 true
             )
             paint.color = typedValue.data
-
+            val gameOverText = "Game Over! Score: $survivalCount"
+            val textWidth = paint.measureText(gameOverText)
+            val x = ((surface?.width ?: 0) - textWidth) / 2f
+            val y = (surface?.height ?: 0) / 2f
+            val highScoreText = "High Score: $highScore"
+            val highScoreWidth = paint.measureText(highScoreText)
             // Draw Game Over screen
             if (isGameOver && canvas != null) {
-                val gameOverText = "Game Over! Score: $survivalCount"
-                val textWidth = paint.measureText(gameOverText)
-                val x = ((surface?.width ?: 0) - textWidth) / 2f
-                val y = (surface?.height ?: 0) / 2f
                 canvas.drawText(gameOverText, x, y, paint)
+                canvas.drawText(highScoreText, ((surface?.width ?: 0) - highScoreWidth) / 2, y + 100, paint)
+            }
 
-                val highScoreText = "High Score: $highScore"
-                val highScoreWidth = paint.measureText(highScoreText)
+            if (isPaused && canvas != null){
                 canvas.drawText(highScoreText, ((surface?.width ?: 0) - highScoreWidth) / 2, y + 100, paint)
             }
         }
+
+        fun resetGame() {
+            // Reset game elements for a fresh start
+            survivalCount = 0
+            isGameOver = false
+
+            // Clear falling items and remove them from the surface
+            fallingItems.forEach { item ->
+                surface?.removeGameObject(item) // Remove from GameSurface
+            }
+            fallingItems.clear()  // Clear the fallingItems list
+
+            // Clear velocities for falling items
+            velocities.clear()
+
+            // Reset the player's position
+            circle?.position = Vector(
+                (surface?.width ?: 0) / 2f, // Center the player horizontally
+                (surface?.height ?: 0) - 150f // Near the bottom of the screen
+            )
+        }
+
 
         private fun checkFloorCollisions() {
             val iterator = fallingItems.iterator()
