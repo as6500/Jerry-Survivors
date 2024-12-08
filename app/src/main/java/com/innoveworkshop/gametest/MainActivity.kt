@@ -1,5 +1,6 @@
 package com.innoveworkshop.gametest
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.graphics.Paint
 import android.os.Bundle
@@ -32,7 +33,7 @@ import kotlin.math.pow
 class MainActivity : AppCompatActivity() {
     protected var gameSurface: GameSurface? = null
     //    protected var upButton: Button? = null
-//    protected var downButton: Button? = null
+    //     protected var downButton: Button? = null
     protected var leftButton: Button? = null
     protected var rightButton: Button? = null
     protected var startButton: Button? = null
@@ -45,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     private var meowSound: MediaPlayer? = null
 
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -82,7 +84,6 @@ class MainActivity : AppCompatActivity() {
                 // App has lost focus (e.g., multitasking mode)
                 if (!isPaused) { // Only pause if not already paused
                     isPaused = true
-                    startButton?.text = "Resume"
                 }
             }
         }
