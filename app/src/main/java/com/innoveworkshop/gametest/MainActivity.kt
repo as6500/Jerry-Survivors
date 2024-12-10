@@ -34,7 +34,6 @@ class MainActivity : AppCompatActivity() {
     private var meowSound: MediaPlayer? = null
     private lateinit var sharedPreferences: SharedPreferences
 
-
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -228,7 +227,7 @@ class MainActivity : AppCompatActivity() {
             val item = DroppingRectangle(
                 bitmap = selectedBitmap,
                 position = Vector(
-                    (Math.random() * screenWidth).toFloat(),
+                    (Math.random() * (screenWidth - 200) + 100).toFloat(),
                     0f
                 ),
                 width = 100f,
@@ -240,6 +239,8 @@ class MainActivity : AppCompatActivity() {
 
             //item initial velocity is 900, otherwise its super slow
             velocities[item] = 900f
+
+            //velocities[item] = 2000f
         }
 
 
