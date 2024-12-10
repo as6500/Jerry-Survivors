@@ -18,7 +18,6 @@ import android.graphics.Canvas
 import android.media.MediaPlayer
 import com.innoveworkshop.gametest.assets.DroppingRectangle
 import kotlin.math.pow
-import kotlin.random.Random
 
 class MainActivity : AppCompatActivity() {
     protected var gameSurface: GameSurface? = null
