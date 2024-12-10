@@ -18,6 +18,7 @@ import android.graphics.Canvas
 import android.media.MediaPlayer
 import com.innoveworkshop.gametest.assets.DroppingRectangle
 import kotlin.math.pow
+import kotlin.random.Random
 
 class MainActivity : AppCompatActivity() {
     protected var gameSurface: GameSurface? = null
@@ -33,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     protected var game: Game? = null
     private var meowSound: MediaPlayer? = null
     private lateinit var sharedPreferences: SharedPreferences
+
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
